@@ -1,76 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../provider/time_entry_provider.dart';
+import '../models/time_entry.dart';
+import '../models/project.dart';
+import '../models/task.dart';
 
 class GroupedEntriesScreen extends StatelessWidget {
   const GroupedEntriesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A9084),
-        title: const Text('Time Tracking', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Tab Bar Simulation
-          Container(
-            color: const Color(0xFF4A9084),
-            child: Row(
-              children: [
-                const Expanded(child: Center(child: Text('All Entries', style: TextStyle(color: Colors.white70)))),
-                Expanded(
-                  child: Column(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Grouped by Projects', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                      Container(height: 4, color: const Color(0xFFFFD54F)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildGroupCard('Project Gamma', ['- Task A: 1 hours (Nov 23, 2024)']),
-                _buildGroupCard('Project Alpha', [
-                  '- Task 1: 12 hours (Nov 23, 2024)',
-                  '- Task C: 3 hours (Nov 23, 2024)',
-                ]),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    return Consumer<TimeEntryProvider>(
+      builder: (context, provider, child) {
+        final entries = provider.entries;
 
-  Widget _buildGroupCard(String projectTitle, List<String> tasks) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(projectTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A9084))),
-          const SizedBox(height: 12),
-          ...tasks.map((task) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(task, style: const TextStyle(fontSize: 15, color: Colors.black87)),
-          )),
-        ],
-      ),
+        if (entries.isEmpty) {
+          return const Center(
+            child: Text(
+              'No time entries yet!',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        // Group entries by projectId
+        final Map<String, List<TimeEntry>> grouped = {};
+        for (var e in entries) {
+          grouped.putIfAbsent(e.projectId, () => []).add(e);
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(12),
+          children: grouped.entries.map((group) {
+            // Look up project by ID, return dummy if not found
+            final project = provider.projects.firstWhere(
+              (p) => p.id == group.key,
+              orElse: () => Project(
+                id: 'unknown',
+                name: 'Unknown Project',
+                description: '',
+                createdAt: DateTime.now(),
+              ),
+            );
+
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4A9084),
+                      ),
+                    ),
+                    ...group.value.map((e) {
+                      // Look up task by ID, return dummy if not found
+                      final task = provider.tasks.firstWhere(
+                        (t) => t.id == e.taskId,
+                        orElse: () => Task(
+                          id: 'unknown',
+                          name: 'Unknown Task',
+                          description: '',
+                          createdAt: DateTime.now(),
+                        ),
+                      );
+
+                      return Text(
+                        '- ${task.name}: ${e.hours.toStringAsFixed(1)} hours '
+                        '(${DateFormat('MMM dd, yyyy').format(e.date)})\nNote: ${e.note}',
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

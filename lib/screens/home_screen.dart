@@ -1,93 +1,194 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
-class AllEntriesScreen extends StatelessWidget {
-  const AllEntriesScreen({super.key});
+import '../models/time_entry.dart';
+import '../provider/time_entry_provider.dart';
+import '../screens/add_time_entry_screen.dart';
+import '../widgets/side_menu.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A9084),
-        elevation: 0,
-        leading: const Icon(Icons.menu, color: Colors.black),
-        title: const Text('Time Tracking', style: TextStyle(color: Colors.white)),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Tab Bar Simulation
-          Container(
-            color: const Color(0xFF4A9084),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('All Entries', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                      Container(height: 4, color: const Color(0xFFFFD54F)), // Active Indicator
-                    ],
-                  ),
-                ),
-                const Expanded(
-                  child: Center(
-                    child: Text('Grouped by Projects', style: TextStyle(color: Colors.white70)),
-                  ),
-                ),
-              ],
-            ),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black87),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-          // Hardcoded List
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildEntryCard('Project Gamma - Task A', '1 hours', 'Nov 23, 2024', 'new work'),
-                _buildEntryCard('Project Alpha - Task 1', '12 hours', 'Nov 23, 2024', 'more work'),
-                _buildEntryCard('Project Alpha - Task C', '3 hours', 'Nov 23, 2024', 'final lab'),
-              ],
-            ),
+        ),
+        title: const Text('Time Tracking',
+            style: TextStyle(color: Colors.white)),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFFFFD54F),
+          indicatorWeight: 4,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          tabs: const [
+            Tab(text: 'All Entries'),
+            Tab(text: 'Grouped by Projects')
+          ],
+        ),
+      ),
+      drawer: const SideMenu(),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          Consumer<TimeEntryProvider>(
+            builder: (context, provider, child) =>
+                _buildAllEntries(provider.entries, provider),
+          ),
+          Consumer<TimeEntryProvider>(
+            builder: (context, provider, child) =>
+                _buildGroupedEntries(provider.entries),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddEntryScreen()),
+          );
+        },
         backgroundColor: const Color(0xFFFFD54F),
         child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
     );
   }
 
-  Widget _buildEntryCard(String title, String hours, String date, String note) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
+  Widget _buildAllEntries(List<TimeEntry> entries, TimeEntryProvider provider) {
+    if (entries.isEmpty) return _buildEmptyState();
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
+        return Card(
+          child: ListTile(
+            title: Text(
+              '${entry.project} - ${entry.task}',
+              style: const TextStyle(
+                color: Color(0xFF4A9084),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: Text(
+              'Total Time: ${entry.hours.toStringAsFixed(1)} hours\n'
+              'Date: ${DateFormat('MMM dd, yyyy').format(entry.date)}\n'
+              'Note: ${entry.note}',
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Entry'),
+                    content: Text(
+                      'Are you sure you want to delete this entry for "${entry.project}" - "${entry.task}"?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
+                        onPressed: () {
+                          provider.deleteTimeEntry(entry.id);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGroupedEntries(List<TimeEntry> entries) {
+    if (entries.isEmpty) return _buildEmptyState();
+    final Map<String, List<TimeEntry>> grouped = {};
+    for (var e in entries) {
+      grouped.putIfAbsent(e.project, () => []).add(e);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: grouped.entries.map((group) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF4A9084))),
-                const SizedBox(height: 8),
-                Text('Total Time: $hours', style: const TextStyle(fontSize: 15, color: Colors.black87)),
-                Text('Date: $date', style: const TextStyle(fontSize: 15, color: Colors.grey)),
-                Text('Note: $note', style: const TextStyle(fontSize: 15, color: Colors.black87)),
+                Text(
+                  group.key,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF4A9084),
+                  ),
+                ),
+                ...group.value.map(
+                  (e) => Text(
+                    '- ${e.task}: ${e.hours.toStringAsFixed(1)} hours '
+                    '(${DateFormat('MMM dd, yyyy').format(e.date)})\nNote: ${e.note}',
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.delete, color: Color(0xFFE57373)), // Specific red from sample
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.hourglass_empty, size: 80, color: Colors.black26),
+          Text(
+            'No time entries yet!',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+          ),
+          Text(
+            'Tap the + button to add your first entry.',
+            style: TextStyle(color: Colors.black38),
+          ),
         ],
       ),
     );

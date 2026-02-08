@@ -3,41 +3,41 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../provider/time_entry_provider.dart';
-import '../widgets/add_task_dialog.dart';
+import '../widgets/add_project_dialog.dart';
 
-class ManageTasksScreen extends StatelessWidget {
-  const ManageTasksScreen({super.key});
+class ManageProjectsScreen extends StatelessWidget {
+  const ManageProjectsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<TimeEntryProvider>(context);
-    final tasks = provider.tasks;
+    final projects = provider.projects;
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF512DA8),
-        title: const Text('Manage Tasks'),
+        title: const Text('Manage Projects'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: tasks.isEmpty
+      body: projects.isEmpty
           ? const Center(
               child: Text(
-                'No tasks yet',
+                'No projects yet',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             )
           : ListView.builder(
-              itemCount: tasks.length,
+              itemCount: projects.length,
               itemBuilder: (context, index) {
-                final task = tasks[index];
+                final project = projects[index];
                 return ListTile(
-                  title: Text(task.name,
+                  title: Text(project.name,
                       style: const TextStyle(fontSize: 18)),
                   subtitle: Text(
-                    '${task.description}\nCreated: ${DateFormat('MMM dd, yyyy').format(task.createdAt)}',
+                    '${project.description}\nCreated: ${DateFormat('MMM dd, yyyy').format(project.createdAt)}',
                     style: const TextStyle(color: Colors.grey),
                   ),
                   trailing: IconButton(
@@ -46,9 +46,9 @@ class ManageTasksScreen extends StatelessWidget {
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Delete Task'),
+                          title: const Text('Delete Project'),
                           content: Text(
-                              'Are you sure you want to delete "${task.name}"?'),
+                              'Are you sure you want to delete "${project.name}"?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
@@ -59,7 +59,7 @@ class ManageTasksScreen extends StatelessWidget {
                                 backgroundColor: Colors.redAccent,
                               ),
                               onPressed: () {
-                                provider.deleteTask(task.id);
+                                provider.deleteProject(project.id);
                                 Navigator.pop(context);
                               },
                               child: const Text('Delete'),
@@ -76,12 +76,12 @@ class ManageTasksScreen extends StatelessWidget {
         onPressed: () {
           showDialog(
             context: context,
-            builder: (context) => const AddTaskDialog(),
+            builder: (context) => const AddProjectDialog(),
           );
         },
         backgroundColor: const Color(0xFFFFD54F),
         child: const Icon(Icons.add, color: Colors.black54),
-        tooltip: 'Add Task',
+        tooltip: 'Add Project',
       ),
     );
   }

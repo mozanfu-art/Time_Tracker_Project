@@ -12,15 +12,16 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  provider: ^6.0.5
-  localstorage: ^4.0.0+1
-  intl: ^0.18.1
-  collection: ^1.17.1
+  provider: ^6.0.5          # State management
+  localstorage: ^4.0.0+1    # Persistent storage
+  intl: ^0.18.1             # Date formatting
+  collection: ^1.17.1       # Utility helpers
+  uuid: ^3.0.7              # Unique ID generation
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^2.0.0     # Code style checks
 
 flutter:
   uses-material-design: true

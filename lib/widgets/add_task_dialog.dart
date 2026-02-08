@@ -1,50 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
+
 import '../provider/time_entry_provider.dart';
 import '../models/task.dart';
 
 class AddTaskDialog extends StatefulWidget {
+  const AddTaskDialog({super.key});
+
   @override
-  _AddTaskDialogState createState() => _AddTaskDialogState();
+  State<AddTaskDialog> createState() => _AddTaskDialogState();
 }
 
 class _AddTaskDialogState extends State<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
-  String name = '';
+  final _nameController = TextEditingController();
+  final _descController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  void _saveTask(BuildContext context) {
+    if (_formKey.currentState!.validate()) {
+      final provider = Provider.of<TimeEntryProvider>(context, listen: false);
+      final newTask = Task(
+        id: const Uuid().v4(),
+        name: _nameController.text.trim(),
+        description: _descController.text.trim(),
+        createdAt: DateTime.now(),
+      );
+      provider.addTask(newTask);
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Add Task'),
+      title: const Text('Add Task'),
       content: Form(
         key: _formKey,
-        child: TextFormField(
-          decoration: InputDecoration(labelText: 'Task Name'),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter a task name';
-            }
-            return null;
-          },
-          onSaved: (value) => name = value!,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Task Name'),
+              validator: (val) =>
+                  val == null || val.trim().isEmpty ? 'Enter a name' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _descController,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+          ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              Provider.of<TimeEntryProvider>(context, listen: false).addTask(
-                Task(id: DateTime.now().toString(), name: name),
-              );
-              Navigator.of(context).pop();
-            }
-          },
-          child: Text('Add'),
+          onPressed: () => _saveTask(context),
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A9084)),
+          child: const Text('Save'),
         ),
       ],
     );
