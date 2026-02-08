@@ -1,11 +1,12 @@
-# Use a lightweight web server
+# Use Flutter SDK image to build
+FROM cirrusci/flutter:stable AS build
+
+WORKDIR /app
+COPY . .
+RUN flutter build web
+
+# Use Nginx to serve
 FROM nginx:alpine
-
-# Copy Flutter web build output into Nginx's default html folder
-COPY build/web /usr/share/nginx/html
-
-# Expose port 80
+COPY --from=build /app/build/web /usr/share/nginx/html
 EXPOSE 80
-
-# Run Nginx
 CMD ["nginx", "-g", "daemon off;"]
