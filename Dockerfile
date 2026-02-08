@@ -1,6 +1,7 @@
 FROM ghcr.io/cirruslabs/flutter:3.38.9 AS build
 WORKDIR /app
 COPY . .
+RUN flutter pub get
 RUN flutter build web
 
 FROM nginx:alpine
