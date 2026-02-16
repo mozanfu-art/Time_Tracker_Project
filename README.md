@@ -94,7 +94,7 @@ This project demonstrates Flutter’s widget system, state management, and Fireb
 ---
 
 ## License
-Academic use only. Not licensed for commercial deployment.
-```
+This project is for **personal portfolio, learning, and demonstration purposes only**.  
+It is **not licensed for commercial deployment or production use**.
 
 ---
